@@ -1,14 +1,14 @@
-Ыplugins {
+plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.jetbrainsKotlinAndroid)
 }
 
 android {
-    namespace = "com.example.marvel"
+    namespace = "com.example.android_lab"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.example.marvel"
+        applicationId = "com.example.android_lab"
         minSdk = 24
         targetSdk = 34
         versionCode = 1
