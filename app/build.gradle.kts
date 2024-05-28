@@ -50,6 +50,10 @@ android {
 }
 
 dependencies {
+    implementation(libs.retrofit2)
+    implementation(libs.retrofit2.converter.moshi)
+    implementation(libs.moshi.kotlin)
+    implementation(libs.moshi)
     implementation(libs.coil.compose)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
