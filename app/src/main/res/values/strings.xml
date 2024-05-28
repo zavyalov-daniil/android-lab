@@ -2,7 +2,7 @@
     <string name="app_name">android-lab</string>
     <string name="placeholder_img">placeholder</string>
     <string name="choose_hero">Choose your hero</string>
-
+    <string name="error_info">Network error</string>
 
     <string name="marvel_logo">https://iili.io/JMnuvbp.png</string>
 </resources>

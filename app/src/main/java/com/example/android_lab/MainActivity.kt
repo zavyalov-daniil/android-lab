@@ -20,17 +20,15 @@ import com.example.android_lab.ui.theme.BlackBackground
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.android_lab.ui.screens.HeroScreen
-import androidx.compose.runtime.LaunchedEffect
 import com.example.android_lab.dto.HeroDto
+import com.example.android_lab.dto.MarvelResponseDto
 import com.example.android_lab.mapper.toModel
 import com.example.android_lab.repository.MarvelApi
 import com.example.android_lab.repository.MarvelApiConstants
 import com.example.android_lab.repository.MarvelApiRepository
+import com.example.android_lab.ui.screens.ErrorScreen
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
@@ -62,30 +60,36 @@ class MainActivity : ComponentActivity() {
                 .build()
                 .create(MarvelApi::class.java)
             val marvelApiRepository = MarvelApiRepository(marvelApi = api)
+            var isError = false
 
             runBlocking {
-                val allHeroes = marvelApiRepository.findAll()
-                val hero = marvelApiRepository.findById(allHeroes.data!!.results[0].id.toString())
-                var isError = false
+                val allHeroes: MarvelResponseDto
+                val hero: MarvelResponseDto
+                try {
+                    allHeroes = marvelApiRepository.findAll()
+                    hero = marvelApiRepository.findById(allHeroes.data!!.results[0].id.toString())
 
-                if (hero.code == 200) {
-                    with(hero.data?.results?.get(0)) {
-                        currentHero.value = this.toModel()
-                    }
-                } else {
-                    isError = true
-                }
-
-                if (allHeroes.code == 200) {
-                    heroList.clear()
-                    with(allHeroes.data!!.results) {
-                        for (i in this.indices) {
-                            val heroDto: HeroDto = this[i]
-                            val heroModel = heroDto.toModel()
-                            heroList.add(heroModel)
+                    if (hero.code == 200) {
+                        with(hero.data?.results?.get(0)) {
+                            currentHero.value = this.toModel()
                         }
+                    } else {
+                        isError = true
                     }
-                } else {
+
+                    if (allHeroes.code == 200) {
+                        heroList.clear()
+                        with(allHeroes.data!!.results) {
+                            for (i in this.indices) {
+                                val heroDto: HeroDto = this[i]
+                                val heroModel = heroDto.toModel()
+                                heroList.add(heroModel)
+                            }
+                        }
+                    } else {
+                        isError = true
+                    }
+                } catch (e: Exception) {
                     isError = true
                 }
             }
@@ -95,7 +99,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = BlackBackground
                 ) {
-                    ScreensContent(heroList, navigationController, currentHero)
+                    ScreensContent(heroList, navigationController, currentHero, isError)
                 }
             }
         }
@@ -112,7 +116,7 @@ private fun ScreensContent(
     NavHost(navController = navigationController, startDestination = Screen.HERO_LIST.name) {
         composable(route = Screen.HERO_LIST.name) {
             if (isError) {
-
+                ErrorScreen()
             } else {
                 ChooseHeroScreen(
                     heroes = heroes,
