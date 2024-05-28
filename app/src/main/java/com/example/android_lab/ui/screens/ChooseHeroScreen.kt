@@ -12,7 +12,7 @@ import com.example.android_lab.model.HeroModel
 import com.example.android_lab.ui.components.MarvelHeader
 
 @Composable
-fun ChooseHeroScreen(heroes: List<HeroModel>, onPreviewClick: (HeroModel) -> Unit = {}) {
+fun ChooseHeroScreen(heroes: MutableList<HeroModel>, onPreviewClick: (HeroModel) -> Unit = {}) {
     val backColor = remember {
         mutableStateOf(Color.Black)
     }
