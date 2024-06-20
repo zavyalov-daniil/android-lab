@@ -20,33 +20,78 @@ import com.example.android_lab.ui.theme.BlackBackground
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.android_lab.ui.screens.HeroScreen
+import com.example.android_lab.dto.HeroDto
+import com.example.android_lab.dto.MarvelResponseDto
+import com.example.android_lab.mapper.toModel
+import com.example.android_lab.repository.MarvelApi
+import com.example.android_lab.repository.MarvelApiConstants
+import com.example.android_lab.repository.MarvelApiRepository
+import com.example.android_lab.ui.screens.ErrorScreen
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import kotlinx.coroutines.runBlocking
+import retrofit2.Retrofit
+import retrofit2.converter.moshi.MoshiConverterFactory
 
 class MainActivity : ComponentActivity() {
-    private val heroes = listOf(
-        HeroModel(
-            "Deadpool",
-            "Please don’t make the super suit green...or animated!",
-            "https://iili.io/JMnAfIV.png"
-        ),
-        HeroModel(
-            "Iron men",
-            "Sometimes you have to run, even before you learn to walk.",
-            "https://iili.io/JMnuDI2.png"
-        ),
-        HeroModel(
-            "Spider Man",
-            "In iron suit",
-            "https://iili.io/JMnuyB9.png"
-        )
-    )
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContent {
-            val navigationController = rememberNavController()
+            val heroPlaceHolder = HeroModel(
+                0,
+                "Deadpool",
+                "Please don’t make the super suit green...or animated!",
+                "https://iili.io/JMnAfIV.png"
+            )
+            val heroList = remember {
+                mutableListOf<HeroModel>(heroPlaceHolder)
+            }
             val currentHero = remember {
-                mutableStateOf(heroes[0])
+                mutableStateOf(heroList[0])
+            }
+            val navigationController = rememberNavController()
+            val moshi = Moshi.Builder()
+                .addLast(KotlinJsonAdapterFactory())
+                .build()
+            val api = Retrofit.Builder()
+                .baseUrl(MarvelApiConstants.BASE_URL)
+                .addConverterFactory(MoshiConverterFactory.create(moshi))
+                .build()
+                .create(MarvelApi::class.java)
+            val marvelApiRepository = MarvelApiRepository(marvelApi = api)
+            var isError = false
+
+            runBlocking {
+                val allHeroes: MarvelResponseDto
+                val hero: MarvelResponseDto
+                try {
+                    allHeroes = marvelApiRepository.findAll()
+                    hero = marvelApiRepository.findById(allHeroes.data!!.results[0].id.toString())
+
+                    if (hero.code == 200) {
+                        with(hero.data?.results?.get(0)) {
+                            currentHero.value = this.toModel()
+                        }
+                    } else {
+                        isError = true
+                    }
+
+                    if (allHeroes.code == 200) {
+                        heroList.clear()
+                        with(allHeroes.data!!.results) {
+                            for (i in this.indices) {
+                                val heroDto: HeroDto = this[i]
+                                val heroModel = heroDto.toModel()
+                                heroList.add(heroModel)
+                            }
+                        }
+                    } else {
+                        isError = true
+                    }
+                } catch (e: Exception) {
+                    isError = true
+                }
             }
 
             AndroidlabTheme {
@@ -54,7 +99,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = BlackBackground
                 ) {
-                    ScreensContent(heroes, navigationController, currentHero)
+                    ScreensContent(heroList, navigationController, currentHero, isError)
                 }
             }
         }
@@ -63,18 +108,23 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun ScreensContent(
-    heroes: List<HeroModel>,
+    heroes: MutableList<HeroModel>,
     navigationController: NavHostController,
-    selectedHero: MutableState<HeroModel>
+    selectedHero: MutableState<HeroModel>,
+    isError: Boolean = false
 ) {
     NavHost(navController = navigationController, startDestination = Screen.HERO_LIST.name) {
         composable(route = Screen.HERO_LIST.name) {
-            ChooseHeroScreen(
-                heroes = heroes,
-                onPreviewClick = { hero ->
-                    selectedHero.value = hero
-                    navigationController.navigate(route = Screen.HERO_INFO.name)
-                })
+            if (isError) {
+                ErrorScreen()
+            } else {
+                ChooseHeroScreen(
+                    heroes = heroes,
+                    onPreviewClick = { hero ->
+                        selectedHero.value = hero
+                        navigationController.navigate(route = Screen.HERO_INFO.name)
+                    })
+            }
         }
         composable(route = Screen.HERO_INFO.name) {
             HeroScreen(hero = selectedHero.value, onReturnCLick = {
